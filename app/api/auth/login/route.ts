@@ -1,27 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { loginUser, createSession, COOKIE_NAME } from "@/lib/auth";
-
-export async function POST(req: NextRequest) {
-  try {
-    const { username, password } = await req.json();
-    if (!username || !password)
-      return NextResponse.json({ error: "Username dan password wajib diisi." }, { status: 400 });
-
-    const result = await loginUser(username, password);
-    if (!result.success)
-      return NextResponse.json({ error: result.error }, { status: 401 });
-
-    const token = await createSession(result.user!);
-    const res   = NextResponse.json({ success: true, user: result.user });
-    res.cookies.set(COOKIE_NAME, token, {
-      httpOnly: true,
-      secure:   true,
-      sameSite: "lax",
-      maxAge:   60 * 60 * 24 * 30,
-      path:     "/",
-    });
-    return res;
-  } catch {
-    return NextResponse.json({ error: "Server error." }, { status: 500 });
-  }
+// app/api/auth/login/route.ts
+// DEPRECATED: Login sekarang menggunakan 2-step OTP flow:
+//   1. POST /api/auth/send-otp  { type: "login", username, password }
+//   2. POST /api/auth/verify-otp { token, otp }
+// Route ini dijaga agar tidak break jika ada yang masih hit endpoint lama.
+import { NextResponse } from "next/server";
+export async function POST() {
+  return NextResponse.json({
+    error: "Endpoint ini sudah tidak digunakan. Gunakan /api/auth/send-otp untuk login.",
+    docs: "https://www.snaptok.my.id/docs",
+  }, { status: 410 });
 }
