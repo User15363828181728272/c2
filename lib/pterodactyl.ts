@@ -109,6 +109,26 @@ export async function writeUserFile(filename: string, data: Record<string, unkno
   }
 }
 
+// ── Delete file ───────────────────────────────────────────────────────────────
+export async function deleteUserFile(filename: string): Promise<boolean> {
+  try {
+    const uuid = await getServerUUID();
+    const path = `${BASE_DIR}/${filename}`;
+    const res  = await fetch(`${CLIENT}/${uuid}/files/delete`, {
+      method:  "POST",
+      headers: {
+        Authorization:  `Bearer ${PLTC}`,
+        Accept:         "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ root: BASE_DIR, files: [filename] }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // ── List all users (for admin) ────────────────────────────────────────────────
 export async function listUserFiles(): Promise<string[]> {
   try {
