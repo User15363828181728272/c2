@@ -72,7 +72,9 @@ export function DownloadForm() {
     }
     setIsLoading(true); setError(""); setVideoData(null);
     try {
-      const res  = await fetch(`/api/v3/download?platform=tiktok&url=${encodeURIComponent(clean)}`);
+      const res  = await fetch(`/api/v3/download?platform=tiktok&url=${encodeURIComponent(clean)}`, {
+        headers: { "X-Internal-Request": "1" },
+      });
       const json = await res.json();
       if (!json.success) setError(json.error || t(tr.err.fetch_failed, lang));
       else setVideoData(json.data as TikTokData);
