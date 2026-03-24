@@ -30,10 +30,28 @@ function proxy(u: string | null): string | null {
 }
 
 export async function GET(req: NextRequest) {
-  // ── API Key validation ────────────────────────────────────────────────────
-  const apikey = extractApiKey(req);
-  const auth   = await validateApiKey(apikey);
-  if (!auth.valid) return errRes(auth.error ?? "API key tidak valid.", 401, { docs: "https://www.snaptok.my.id/docs" });
+  // ── API Key validation (hanya untuk akses langsung / developer) ───────────
+  // Jika request dari web UI (ada header X-Internal-Request atau same-origin),
+  // skip validasi API key — user biasa tidak perlu API key
+  const origin   = req.headers.get("origin") ?? "";
+  const referer  = req.headers.get("referer") ?? "";
+  const isWeb =
+    req.headers.get("x-internal-request") === "1" ||
+    origin.includes("snaptok.my.id") ||
+    origin.includes("localhost") ||
+    referer.includes("snaptok.my.id") ||
+    referer.includes("localhost");
+
+  let apiUsername: string | undefined;
+
+  if (!isWeb) {
+    // Request langsung dari developer → wajib API key
+    const apikey = extractApiKey(req);
+    const auth   = await validateApiKey(apikey);
+    if (!auth.valid)
+      return errRes(auth.error ?? "API key tidak valid.", 401, { docs: "https://www.snaptok.my.id/docs" });
+    apiUsername = auth.username;
+  }
 
   const { searchParams } = new URL(req.url);
   const platform = searchParams.get("platform")?.toLowerCase();
@@ -56,7 +74,7 @@ export async function GET(req: NextRequest) {
       const json = await res.json();
       if (json.code !== 0 || !json.data) return errRes(json.msg || "Gagal mengambil data video TikTok.");
       const d = json.data;
-      await incrementRequests(auth.username!);
+      if (apiUsername) await incrementRequests(apiUsername);
       return NextResponse.json({
         success: true, platform: "tiktok",
         data: {
@@ -80,7 +98,7 @@ export async function GET(req: NextRequest) {
       const json = await res.json();
       if (!json.data) return errRes(json.msg || "Gagal mengambil data video Douyin.");
       const d = json.data;
-      await incrementRequests(auth.username!);
+      if (apiUsername) await incrementRequests(apiUsername);
       return NextResponse.json({
         success: true, platform: "douyin",
         data: { title: d.title ?? "", cover: d.imageUrl ?? "",
