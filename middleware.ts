@@ -65,14 +65,27 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // ── 5. Protect /api/v3/* with API key ─────────────────────────────────────
+  // ── 5. Protect /api/v3/* with API key (hanya untuk akses eksternal) ─────────
   if (pathname.startsWith("/api/v3/")) {
     // proxy tidak perlu apikey (internal)
     if (pathname.startsWith("/api/v3/proxy")) return NextResponse.next();
 
-    const url    = req.nextUrl;
-    const apikey = url.searchParams.get("apikey") ?? req.headers.get("x-api-key") ?? "";
+    const url     = req.nextUrl;
+    const apikey  = url.searchParams.get("apikey") ?? req.headers.get("x-api-key") ?? "";
+    const origin  = req.headers.get("origin") ?? "";
+    const referer = req.headers.get("referer") ?? "";
 
+    // Internal request dari web UI → tidak perlu API key
+    const isWeb =
+      req.headers.get("x-internal-request") === "1" ||
+      origin.includes("snaptok.my.id") ||
+      origin.includes("localhost") ||
+      referer.includes("snaptok.my.id") ||
+      referer.includes("localhost");
+
+    if (isWeb) return NextResponse.next();
+
+    // Akses langsung / developer → wajib API key
     if (!apikey || !apikey.startsWith("snp-")) {
       return NextResponse.json(
         {
@@ -83,8 +96,6 @@ export async function middleware(req: NextRequest) {
         { status: 401 }
       );
     }
-    // Key format valid — actual lookup dilakukan di route handler
-    // (middleware tidak bisa import lib/ yang pakai fetch karena cold start)
     return NextResponse.next();
   }
 
